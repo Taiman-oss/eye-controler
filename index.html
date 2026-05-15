@@ -1,99 +1,282 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uz">
 <head>
 <meta charset="UTF-8">
-<title>Brain UI Eye Control</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+<title>Fingerprint Login</title>
 
 <style>
-body {
-  margin: 0;
-  overflow: hidden;
-  background: radial-gradient(circle at center, #050816, #000);
-  font-family: Arial;
-  color: white;
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
 }
 
-/* center brain dot */
-#brain {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: cyan;
-  box-shadow: 0 0 30px cyan;
-  transform: translate(-50%, -50%);
+body{
+    background:#050816;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    font-family:Arial;
+    color:white;
 }
 
-/* panels */
-.panel {
-  position: absolute;
-  width: 120px;
-  height: 120px;
-  border-radius: 20px;
-  background: rgba(0,255,255,0.08);
-  border: 1px solid rgba(0,255,255,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(10px);
-  transition: 0.2s;
+.bg{
+    position:absolute;
+    width:600px;
+    height:600px;
+    border-radius:50%;
+    background:radial-gradient(circle,
+    rgba(0,255,255,0.15),
+    transparent 70%);
+    animation:rotate 8s linear infinite;
 }
 
-.panel span {
-  color: cyan;
-  font-weight: bold;
+@keyframes rotate{
+    from{transform:rotate(0deg);}
+    to{transform:rotate(360deg);}
+}
+
+.panel{
+    position:relative;
+    z-index:2;
+    width:340px;
+    padding:40px;
+    border:1px solid rgba(0,255,255,0.2);
+    border-radius:25px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(20px);
+    text-align:center;
+    box-shadow:0 0 40px rgba(0,255,255,0.15);
+}
+
+.title{
+    font-size:28px;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+.sub{
+    opacity:.7;
+    margin-bottom:30px;
+}
+
+.finger{
+    width:140px;
+    height:140px;
+    margin:auto;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    border:2px solid #00ffff;
+    box-shadow:
+    0 0 25px #00ffff,
+    inset 0 0 25px #00ffff;
+    animation:pulse 2s infinite;
+    cursor:pointer;
+}
+
+@keyframes pulse{
+    0%{
+        transform:scale(1);
+        box-shadow:0 0 20px #00ffff;
+    }
+    50%{
+        transform:scale(1.05);
+        box-shadow:0 0 45px #00ffff;
+    }
+    100%{
+        transform:scale(1);
+        box-shadow:0 0 20px #00ffff;
+    }
+}
+
+.finger span{
+    font-size:70px;
+}
+
+button{
+    margin-top:30px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:15px;
+    background:#00e5ff;
+    color:black;
+    font-size:17px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.3s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 20px #00ffff;
+}
+
+.status{
+    margin-top:20px;
+    min-height:25px;
+    color:#7fffd4;
+}
+
+.success{
+    color:#00ff99;
+}
+
+.error{
+    color:#ff5f7a;
 }
 </style>
 </head>
-
 <body>
 
-<div id="brain"></div>
+<div class="bg"></div>
 
-<div class="panel" style="top:20%; left:20%"><span>AI</span></div>
-<div class="panel" style="top:20%; right:20%"><span>CODE</span></div>
-<div class="panel" style="bottom:20%; left:20%"><span>DESIGN</span></div>
-<div class="panel" style="bottom:20%; right:20%"><span>SYSTEM</span></div>
+<div class="panel">
+
+<div class="title">BIOMETRIC LOGIN</div>
+<div class="sub">Fingerprint orqali kirish</div>
+
+<div class="finger" id="fingerBtn">
+    <span>🧬</span>
+</div>
+
+<button onclick="register()">Fingerprint Ro'yxatdan O'tkazish</button>
+<button onclick="login()">Login</button>
+
+<div class="status" id="status"></div>
+
+</div>
 
 <script>
-const brain = document.getElementById("brain");
+const statusText = document.getElementById("status");
 
-// start eye tracking
-webgazer.setGazeListener((data, elapsedTime) => {
-  if (!data) return;
+function setStatus(text,type=""){
+    statusText.innerText = text;
+    statusText.className = "status "+type;
+}
 
-  let x = data.x;
-  let y = data.y;
+function bufferToBase64(buffer){
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
 
-  // move brain dot
-  brain.style.left = x + "px";
-  brain.style.top = y + "px";
+function base64ToBuffer(base64){
+    const binary = atob(base64);
+    return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
 
-  // panels react to gaze
-  document.querySelectorAll(".panel").forEach(p => {
-    let rect = p.getBoundingClientRect();
-    let px = rect.left + rect.width/2;
-    let py = rect.top + rect.height/2;
+async function register(){
 
-    let dx = px - x;
-    let dy = py - y;
-    let dist = Math.sqrt(dx*dx + dy*dy);
+    if(!window.PublicKeyCredential){
+        setStatus("WebAuthn qo'llab quvvatlanmaydi","error");
+        return;
+    }
 
-    let scale = Math.max(0.8, 2 - dist / 300);
+    try{
 
-    p.style.transform = `scale(${scale})`;
-    p.style.boxShadow = `0 0 ${scale*25}px cyan`;
-  });
+        const publicKey = {
+            challenge:new Uint8Array(32),
 
-}).begin();
+            rp:{
+                name:"Taiman Secure"
+            },
 
-// show webcam preview OFF (clean UI)
-webgazer.showVideo(false);
-webgazer.showFaceOverlay(false);
-webgazer.showFaceFeedbackBox(false);
+            user:{
+                id:new Uint8Array(16),
+                name:"user@taiman.dev",
+                displayName:"Taiman"
+            },
+
+            pubKeyCredParams:[
+                {
+                    type:"public-key",
+                    alg:-7
+                }
+            ],
+
+            authenticatorSelection:{
+                authenticatorAttachment:"platform",
+                userVerification:"required"
+            },
+
+            timeout:60000,
+            attestation:"direct"
+        };
+
+        const credential = await navigator.credentials.create({
+            publicKey
+        });
+
+        localStorage.setItem(
+            "credentialId",
+            bufferToBase64(credential.rawId)
+        );
+
+        setStatus("Fingerprint muvaffaqiyatli saqlandi","success");
+
+    }catch(err){
+        setStatus("Xato: "+err.message,"error");
+    }
+}
+
+async function login(){
+
+    const savedId = localStorage.getItem("credentialId");
+
+    if(!savedId){
+        setStatus("Avval register qiling","error");
+        return;
+    }
+
+    try{
+
+        const publicKey = {
+            challenge:new Uint8Array(32),
+
+            allowCredentials:[
+                {
+                    id:base64ToBuffer(savedId),
+                    type:"public-key",
+                    transports:["internal"]
+                }
+            ],
+
+            userVerification:"required",
+            timeout:60000
+        };
+
+        const assertion = await navigator.credentials.get({
+            publicKey
+        });
+
+        if(assertion){
+            setStatus("LOGIN SUCCESS","success");
+
+            setTimeout(()=>{
+                document.body.innerHTML=`
+                <div style="
+                height:100vh;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                background:black;
+                color:#00ff99;
+                font-size:40px;
+                font-family:Arial;
+                ">
+                ACCESS GRANTED
+                </div>`;
+            },1000);
+        }
+
+    }catch(err){
+        setStatus("Login bekor qilindi yoki xato","error");
+    }
+}
 </script>
 
 </body>
