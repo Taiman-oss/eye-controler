@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Brain UI Eye Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #050816, #000);
+  font-family: Arial;
+  color: white;
+}
+
+/* center brain dot */
+#brain {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: cyan;
+  box-shadow: 0 0 30px cyan;
+  transform: translate(-50%, -50%);
+}
+
+/* panels */
+.panel {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  background: rgba(0,255,255,0.08);
+  border: 1px solid rgba(0,255,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  transition: 0.2s;
+}
+
+.panel span {
+  color: cyan;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div id="brain"></div>
+
+<div class="panel" style="top:20%; left:20%"><span>AI</span></div>
+<div class="panel" style="top:20%; right:20%"><span>CODE</span></div>
+<div class="panel" style="bottom:20%; left:20%"><span>DESIGN</span></div>
+<div class="panel" style="bottom:20%; right:20%"><span>SYSTEM</span></div>
+
+<script>
+const brain = document.getElementById("brain");
+
+// start eye tracking
+webgazer.setGazeListener((data, elapsedTime) => {
+  if (!data) return;
+
+  let x = data.x;
+  let y = data.y;
+
+  // move brain dot
+  brain.style.left = x + "px";
+  brain.style.top = y + "px";
+
+  // panels react to gaze
+  document.querySelectorAll(".panel").forEach(p => {
+    let rect = p.getBoundingClientRect();
+    let px = rect.left + rect.width/2;
+    let py = rect.top + rect.height/2;
+
+    let dx = px - x;
+    let dy = py - y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+
+    let scale = Math.max(0.8, 2 - dist / 300);
+
+    p.style.transform = `scale(${scale})`;
+    p.style.boxShadow = `0 0 ${scale*25}px cyan`;
+  });
+
+}).begin();
+
+// show webcam preview OFF (clean UI)
+webgazer.showVideo(false);
+webgazer.showFaceOverlay(false);
+webgazer.showFaceFeedbackBox(false);
+</script>
+
+</body>
+</html>
